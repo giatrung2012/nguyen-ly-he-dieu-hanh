@@ -1,6 +1,6 @@
 ﻿// namespace ExclusivePriorityDispatch
 // {
-//     class ExclusivePriorityDispatch
+//     class Bai3p1
 //     {
 //         static void Main(string[] args)
 //         {

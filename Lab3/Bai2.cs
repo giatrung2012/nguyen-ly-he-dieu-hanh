@@ -1,6 +1,6 @@
 // namespace RoundRobin
 // {
-//     class RoundRobin
+//     class Bai2
 //     {
 //         public static void roundRobin(String[] p, int[] a,
 //         int[] b, int q)

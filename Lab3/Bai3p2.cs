@@ -1,6 +1,6 @@
 // namespace ShortJobFirst
 // {
-//     class ShortJobFirst
+//     class Bai3p2
 //     {
 //         static void Main(string[] args)
 //         {
