@@ -1,8 +1,6 @@
 ﻿using System;
-using System.IO;
-using System.Net;
 using System.Net.Sockets;
-using System.Runtime.Serialization.Formatters.Binary;
+using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -10,110 +8,59 @@ namespace Client
 {
     public partial class frmClient : Form
     {
-        IPEndPoint IP;
-        Socket client;
-        private string msg;
-        MemoryStream stream;
-        BinaryFormatter formatter;
-        Thread listen;
-
         public frmClient()
         {
             InitializeComponent();
             CheckForIllegalCrossThreadCalls = false;
-            Connect();
             ActiveControl = txtMessage;
         }
 
-        private void frmClient_Shown(object sender, EventArgs e)
-        {
-            txtMessage.Focus();
-        }
-
-        private void btnSend_Click(object sender, EventArgs e)
-        {
-            Send();
-            AddMessage("Client: " + txtMessage.Text);
-            txtMessage.Focus();
-        }
-
-        private void Connect()
-        {
-            IP = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 9999);
-            client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.IP);
-            try
-            {
-                client.Connect(IP);
-            }
-            catch
-            {
-                MessageBox.Show("Không thể kết nối đến server", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-            listen = new Thread(Receive);
-            listen.IsBackground = true;
-            listen.Start();
-        }
-
-        private void Close()
-        {
-            client.Close();
-        }
-
-        private void Send()
-        {
-            if (txtMessage.Text != String.Empty)
-                client.Send(Serialize("Client: " + txtMessage.Text));
-        }
-
-        private void Receive()
-        {
-            try
-            {
-                while (true)
-                {
-                    byte[] data = new byte[1024 * 5000];
-                    client.Receive(data);
-                    msg = (string)Deserialize(data);
-                    AddMessage(msg);
-                }
-            }
-            catch
-            {
-                Close();
-            }
-        }
-
-        private void AddMessage(string s)
-        {
-            lsvMessage.Items.Add(new ListViewItem() { Text = s });
-            txtMessage.Clear();
-            txtMessage.Focus();
-        }
-
-        byte[] Serialize(object obj)
-        {
-            stream = new MemoryStream();
-            formatter = new BinaryFormatter();
-            formatter.Serialize(stream, obj);
-            return stream.ToArray();
-        }
-
-        object Deserialize(byte[] data)
-        {
-            stream = new MemoryStream(data);
-            formatter = new BinaryFormatter();
-            return formatter.Deserialize(stream);
-        }
-
-        private void frmClient_FormClosed(object sender, FormClosedEventArgs e)
-        {
-            Close();
-        }
-
+        TcpClient clientSocket = new TcpClient();
+        NetworkStream serverStream = default;
+        string readData = null;
         private void frmClient_Load(object sender, EventArgs e)
         {
-            txtMessage.Focus();
+        }
+        private void btnConnect_Click(object sender, EventArgs e)
+        {
+            readData = "Conected to Chat Server ...";
+            msg();
+            clientSocket.Connect("127.0.0.1", 8888);
+            serverStream = clientSocket.GetStream();
+            //Tao thong diep join
+            byte[] outStream = Encoding.ASCII.GetBytes(txtUsername.Text + "$");
+            //Gui thong diep
+            serverStream.Write(outStream, 0, outStream.Length);
+            //Xoa bo dem
+            serverStream.Flush();
+            Thread ctThread = new Thread(getMessage);
+            ctThread.Start();
+        }
+        private void getMessage()
+        {
+            while (true)
+            {
+                serverStream = clientSocket.GetStream();
+                int buffSize = clientSocket.ReceiveBufferSize;
+                byte[] inStream = new byte[65536];
+                serverStream.Read(inStream, 0, buffSize);
+                readData = Encoding.ASCII.GetString(inStream);
+                msg();
+            }
+        }
+        private void msg()
+        {
+            //Xu truy cap lsvMessage tu Thread getMessage
+            if (this.InvokeRequired)
+                this.Invoke(new MethodInvoker(msg));
+            else
+                lsvMessage.Text = lsvMessage.Text + Environment.NewLine + " >> " + readData;
+        }
+        private void btnSend_Click(object sender, EventArgs e)
+        {
+            byte[] outStream = Encoding.ASCII.GetBytes(txtMessage.Text + "$");
+            serverStream.Write(outStream, 0, outStream.Length);
+            serverStream.Flush();
         }
     }
 }
